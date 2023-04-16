@@ -1,0 +1,152 @@
+## Elastic Installation Guide
+1. Download ElasticSearch from the below URL:
+	- https://www.elastic.co/downloads/elasticsearch OR
+	- https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.6.2-windows-x86_64.zip
+
+2. Extract the downloaded ZIP file to C:\elk\elasticsearch-8.6.2
+
+3. Setup Environment Variable for ElasticSearch for path C:\elk\elasticsearch-8.6.2\bin
+
+4. Start elasticsearch with command "elasticsearch" from cmd and copy the Password generated on console. (This will create required cert files and setup user "elastic" and print the password for it on console)
+	(reset password with "elasticsearch-reset-password -u elastic" if required)
+	
+5. Open the config/elasticsearch.yml file in a text editor and uncomment/change/update the settings mentioned below
+	- "network.host" setting to "localhost".
+	- "xpack.security.enabled" setting to "false".
+	- "xpac.security.http.ssl.enabled" setting to "false".
+	- "xpac.security.transport.ssl.enabled" setting to "false".
+	
+6. Run the below command to create system_user and password for it:
+	- elasticsearch-users useradd elk -p password
+
+7. Open the config/roles.yml file in a text editor and change the settings mentioned below
+admins:
+  cluster:
+    - all
+  indices:
+    - names:
+        - "*"
+      privileges:
+        - all
+devs:
+  cluster:
+    - manage
+  indices:
+    - names:
+        - "*"
+      privileges:
+        - write
+        - delete
+        - create_index
+	
+8. Validate if users_role file has values or not. If not then assign values
+
+monitoring:elk
+admins:elk
+network:elk
+
+
+## Kibana Installation Guide
+1. Download Kibana from the below URL:
+	- https://www.elastic.co/downloads/kibana OR
+	- https://artifacts.elastic.co/downloads/kibana/kibana-8.6.2-windows-x86_64.zip
+
+2. Extract the downloaded ZIP file to C:\elk\kibana-8.6.2
+
+3. Setup Environment Variable for Kibana for path C:\elk\kibana-8.6.2\bin
+
+4. Open the config/kibana.yml file in a text editor and uncomment/change/update the settings mentioned below
+	- "elasticsearch.hosts" setting to "["http://localhost:9200"]".
+	- "elasticsearch.username" setting to "elk"
+	- "elasticsearch.password" setting to "password"
+	
+# Now Start Elastic and Kibana using commands "elasticsearch" AND "kibana"
+# Validate them on URL "http://localhost:9200" AND "http://localhost:5601"
+
+
+## Logstash Installation Guide with MYSQL
+1. Download ElasticSearch from the below URL:
+	- https://www.elastic.co/downloads/logstash OR
+	- https://artifacts.elastic.co/downloads/logstash/logstash-8.6.2-windows-x86_64.zip
+
+2. Extract the downloaded ZIP file to C:\elk\logstash-8.6.2
+
+3. Setup Environment Variable for Logstash for path C:\elk\logstash-8.6.2\bin
+
+4. Download MySQL connector driver from below URL and palce the jar inside "C:\elk\logstash-8.6.2\logstash-core\lib\jars\":
+	- https://dev.mysql.com/downloads/file/?id=515796
+	
+5. Create a config file "logstash-mysql.conf" inside "C:\elk\logstash-8.6.2\config" folder and set below properties
+
+input {
+  jdbc {
+    #jdbc_driver_library => "C:\elk\logstash-8.6.2\logstash-core\lib\jars\mysql-connector-j-8.0.32"
+    jdbc_driver_class => "com.mysql.cj.jdbc.Driver"
+    jdbc_connection_string => "jdbc:mysql://localhost:3306/elk_db"
+    jdbc_user => "root"
+    jdbc_password => "password"
+	jdbc_default_timezone => "UTC"
+	schedule => "*/10 * * * * *"
+	use_column_value => true
+    #statement => "SELECT id,firstname,lastname,email,created,updated FROM customer where id > :sql_last_value"
+	#tracking_column => "id"
+	#clean_run => true
+	statement => "SELECT id,firstname,lastname,email,created,updated FROM customer where updated > :sql_last_value order by updated DESC"
+	tracking_column => "updated"
+	tracking_column_type => "timestamp"
+	last_run_metadata_path => "C:\elk\logstash-8.6.2\jdbc_last_run\.mysql_last_run"
+  }
+}
+
+#filter {
+#    mutate { remove_field => "updated" }
+#}
+
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "customer"
+	document_id => "%{id}"
+  }
+  stdout {
+    codec => rubydebug
+  }
+}
+
+6. Setup MySQL database with username - "root" and password "password" and use below command to create database and table
+
+	- drop database elk_db;
+	- create database elk_db;
+	- use elk_db;
+	- drop table customer;
+	- create table customer(
+		id int PRIMARY KEY AUTO_INCREMENT,
+		firstname VARCHAR(50) ,
+		lastname VARCHAR(50),
+		email VARCHAR(100),
+        created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+	);
+	- INSERT INTO customer(firstname,lastname,email) values ("kasauti","zindagi","kasauti@gmail.com");
+	- INSERT INTO customer(firstname,lastname,email) values ("rahul","sharma","rahul@gmail.com");
+	- INSERT INTO customer(firstname,lastname,email) values ("suzane","kulkarni","suzane@gmail.com");
+	- INSERT INTO customer(firstname,lastname,email) values ("rishab","kumar","rishab@gmail.com");
+	
+	- select * from customer;
+	
+7. Once everything is configured start logstash with below command:
+	- logstash -f "C:\elk\logstash-8.6.2\config\logstash-mysql.conf"
+	
+## Once started it will start copying all the data from MYSQL and any new inserts and updates too
+
+
+## Configure Kibana to see Data:
+1. Navigate to Kibana "http://localhost:5601/" and from the left pane navigate to "Data View"
+
+2. Create Data View and select the index created while creating "logstash-mysql.conf" file. (i.e. customer) - This will also get highlighted automatically after clicking on Create Data View
+
+3. Provide Name(customer), Index pattern (customer) and Timestamp Field (@timestamp) and save dataview to kibana
+
+Walla 	- ELK Setup is done alone with MYSQL data streaming to Elastik Search and can be visualized with Kibana
+		- We can also use "elasticsearch-sql-cli" using cmd to validate database
+	
