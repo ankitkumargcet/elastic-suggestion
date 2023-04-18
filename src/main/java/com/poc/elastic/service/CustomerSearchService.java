@@ -1,8 +1,6 @@
 package com.poc.elastic.service;
 
 import com.poc.elastic.entity.Customer;
-import org.springframework.data.domain.Page;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 
 import java.util.List;
 
@@ -16,6 +14,6 @@ public interface CustomerSearchService {
 
     List<String> searchSuggestionByFirstname(String firstname);
 
-    List<String> searchSuggestionByName(String firstname, String lastname, String email);
+    List<String> searchSuggestionByName(String name);
 
 }
