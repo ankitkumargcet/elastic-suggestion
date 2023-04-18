@@ -14,6 +14,7 @@ import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +30,12 @@ public class CustomerSearchServiceImpl implements CustomerSearchService {
     public Iterable<Customer> getAllCustomers() {
         return customerRepository.findAll();
     }
+
+    @Override
+    public Optional<Customer> getCustomerById(long id) {
+        return customerRepository.findById(id);
+    }
+
 
     @Override
     public Iterable<Customer> getCustomerByEmail(String email) {
@@ -77,7 +84,7 @@ public class CustomerSearchServiceImpl implements CustomerSearchService {
         List<Customer> customers = searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
 
         return customers.stream()
-                .map(customer -> customer.getFirstname() + " " + customer.getLastname())
+                .map(customer -> customer.getId() + "," + customer.getFirstname() + " " + customer.getLastname())
                 .collect(Collectors.toList());
     }
 

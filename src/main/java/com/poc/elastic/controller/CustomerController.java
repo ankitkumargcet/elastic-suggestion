@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/customer")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class CustomerController {
 
     @Autowired
@@ -17,6 +18,11 @@ public class CustomerController {
     @GetMapping("/findAll")
     public Iterable<Customer> getCustomers() {
         return customerSearchService.getAllCustomers();
+    }
+
+    @GetMapping("/findById/{id}")
+    public Customer getCustomerByEmail(@PathVariable("id") long id) {
+        return customerSearchService.getCustomerById(id).get();
     }
 
     @GetMapping("/findByEmail/{email}")
